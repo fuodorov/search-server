@@ -48,9 +48,15 @@ vector<string> SplitIntoWords(const string& text) {
 }
 
 struct Document {
-    int id;
-    double relevance;
-    int rating;
+    Document() = default;
+
+    Document(int id_, double relevance_, int rating_)
+            : id(id_), relevance(relevance_), rating(rating_)
+    {}
+
+    int id = 0;
+    double relevance = 0.0;
+    int rating = 0;
 };
 
 enum class DocumentStatus {
@@ -62,13 +68,34 @@ enum class DocumentStatus {
 
 class SearchServer {
 public:
-    void SetStopWords(const string& text) {
-        for (const string& word : SplitIntoWords(text)) {
+    template <typename StringContainer>
+    explicit SearchServer(const StringContainer& stop_words) {
+        if (!all_of(begin(stop_words), end(stop_words), IsValidWord)) {
+            throw invalid_argument("Some of stop words are invalid");
+        }
+
+        string stop_words_text;
+        for (const auto& text : stop_words) {
+            stop_words_text += " "s;
+            stop_words_text += text;
+        }
+        for (const auto& word : SplitIntoWords(stop_words_text)) {
             stop_words_.insert(word);
         }
     }
 
+    explicit SearchServer(const string& stop_words_text) : SearchServer(SplitIntoWords(stop_words_text)) {}
+
     void AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int>& ratings) {
+        if (document_id < 0) {
+            throw invalid_argument("id must be >= 0"s);
+        }
+        if (documents_.count(document_id) > 0) {
+            throw invalid_argument("id must be unique"s);
+        }
+        if (!IsValidWord(document)) {
+            throw invalid_argument("document must be not includes special symbols"s);
+        }
         const vector<string> words = SplitIntoWordsNoStop(document);
         const double inv_word_count = 1.0 / words.size();
         for (const string& word : words) {
@@ -104,6 +131,13 @@ public:
 
     int GetDocumentCount() const {
         return documents_.size();
+    }
+
+    int GetDocumentId(int index) const {
+        if (index < 0 || index >= GetDocumentCount()) {
+            throw out_of_range("index out of range"s);
+        }
+        return index;
     }
 
     tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const {
@@ -143,6 +177,12 @@ private:
         return stop_words_.count(word) > 0;
     }
 
+    static bool IsValidWord(const string& word) {
+        return none_of(word.begin(), word.end(), [](char c) {
+            return c > '\0' && c < ' ';
+        });
+    }
+
     vector<string> SplitIntoWordsNoStop(const string& text) const {
         vector<string> words;
         for (const string& word : SplitIntoWords(text)) {
@@ -164,12 +204,25 @@ private:
     };
 
     QueryWord ParseQueryWord(string text) const {
+        if (text.empty()) {
+            throw invalid_argument("Query word is empty"s);
+        }
+
         bool is_minus = false;
 
         if (text[0] == '-') {
             is_minus = true;
             text = text.substr(1);
         }
+
+        if (text.empty()) {
+            throw invalid_argument("Query word is empty"s);
+        } else if (!IsValidWord(text)) {
+            throw invalid_argument("Query word "s + text + " includes special symbols"s);
+        } else if (text[0] == '-') {
+            throw invalid_argument("Query word "s + text + " starts with minus"s);
+        }
+
         return {text, is_minus, IsStopWord(text)};
     }
 
@@ -373,7 +426,7 @@ const vector<TEST_MATCH_DOCUMENT_REQUEST> TEST_MATCH_DOCUMENT_REQUESTS_WITH_MINU
 };
 
 SearchServer CreateTestServer() {
-    SearchServer server;
+    SearchServer server(" "s);
     for (const auto& doc : TEST_DOCUMENTS) {
         server.AddDocument(doc.id, doc.content, doc.status, doc.ratings);
     }
@@ -461,11 +514,21 @@ void TestExcludeStopWordsFromAddedDocumentContent() {
         }
     }
 
+    vector<string> stop_words;
+    for (const TEST_COUNT_STOP_WORD_REQUEST &request: TEST_COUNT_STOP_WORD_REQUESTS) {
+        stop_words.push_back(request.word);
+    }
+
+    SearchServer server2(stop_words);
+
+    for (const auto& doc : TEST_DOCUMENTS) {
+        server2.AddDocument(doc.id, doc.content, doc.status, doc.ratings);
+    }
+
     {
         for (const TEST_COUNT_STOP_WORD_REQUEST &request: TEST_COUNT_STOP_WORD_REQUESTS) {
-            server.SetStopWords({request.word});
-            ASSERT_EQUAL_HINT(server.FindTopDocuments(request.word).size(), 0,
-                              "Incorrect count of documents with word '"s + request.word + "' after excluding it"s);
+            ASSERT_EQUAL_HINT(server2.FindTopDocuments(request.word).size(), 0,
+                              "Incorrect count of documents with word '"s + request.word + "'"s);
         }
     }
 }
@@ -501,7 +564,7 @@ void TestSortResultsByRelevance() {
 }
 
 void TestCalculateRelevance() {
-    SearchServer server;
+    SearchServer server(" "s);
     const vector<TEST_DOCUMENT> test_docs = {
             {1, "white cat with new ring"s, DocumentStatus::ACTUAL, {1, 2, 3}},
             {2, "fluffy cat fluffy tail"s, DocumentStatus::ACTUAL, {1, 2, 3}},
