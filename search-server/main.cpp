@@ -486,6 +486,39 @@ void TestExcludeDocumentsWithMinusWordsFromAddedDocumentContent() {
     }
 }
 
+void TestSortResultsByRelevance() {
+    SearchServer server = CreateTestServer();
+
+    {
+        for (const TEST_MATCH_DOCUMENT_REQUEST &request: TEST_MATCH_DOCUMENT_REQUESTS) {
+            const auto &docs = server.FindTopDocuments(request.query);
+            for (size_t i = 1; i < docs.size(); ++i) {
+                ASSERT_HINT(docs[i - 1].relevance >= docs[i].relevance,
+                            "Incorrect relevance order for query '"s + request.query + "'"s);
+            }
+        }
+    }
+}
+
+void TestCalculateRelevance() {
+    SearchServer server;
+    const vector<TEST_DOCUMENT> test_docs = {
+            {1, "white cat with new ring"s, DocumentStatus::ACTUAL, {1, 2, 3}},
+            {2, "fluffy cat fluffy tail"s, DocumentStatus::ACTUAL, {1, 2, 3}},
+            {3, "good dog big eyes"s, DocumentStatus::ACTUAL, {1, 2, 3}},
+    };
+    for (const auto& doc : test_docs) {
+        server.AddDocument(doc.id, doc.content, doc.status, doc.ratings);
+    }
+
+    double relevance = log((3 * 1.0) / 1) * (2.0 / 4.0) + log((3 * 1.0) / 2) * (1.0 / 4.0);
+
+    {
+        ASSERT_HINT(fabs(server.FindTopDocuments("fluffy good cat"s)[0].relevance - relevance) < EPS,
+                    "Incorrect relevance for query 'fluffy good cat'"s);
+    }
+}
+
 void TestSearchServer() {
     RUN_TEST(TestDocumentSearchByQuery);
     RUN_TEST(TestDocumentSearchByStatus);
@@ -493,6 +526,8 @@ void TestSearchServer() {
     RUN_TEST(TestCalculateDocumentRating);
     RUN_TEST(TestExcludeStopWordsFromAddedDocumentContent);
     RUN_TEST(TestExcludeDocumentsWithMinusWordsFromAddedDocumentContent);
+    RUN_TEST(TestSortResultsByRelevance);
+    RUN_TEST(TestCalculateRelevance);
 }
 
 int main() {
