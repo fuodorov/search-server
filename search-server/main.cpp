@@ -59,6 +59,17 @@ struct Document {
     int rating = 0;
 };
 
+template <typename StringContainer>
+set<string> MakeUniqueNonEmptyStrings(const StringContainer& strings) {
+    set<string> non_empty_strings;
+    for (const string& str : strings) {
+        if (!str.empty()) {
+            non_empty_strings.insert(str);
+        }
+    }
+    return non_empty_strings;
+}
+
 enum class DocumentStatus {
     ACTUAL,
     IRRELEVANT,
@@ -69,18 +80,9 @@ enum class DocumentStatus {
 class SearchServer {
 public:
     template <typename StringContainer>
-    explicit SearchServer(const StringContainer& stop_words) {
-        if (!all_of(begin(stop_words), end(stop_words), IsValidWord)) {
-            throw invalid_argument("Some of stop words are invalid");
-        }
-
-        string stop_words_text;
-        for (const auto& text : stop_words) {
-            stop_words_text += " "s;
-            stop_words_text += text;
-        }
-        for (const auto& word : SplitIntoWords(stop_words_text)) {
-            stop_words_.insert(word);
+    explicit SearchServer(const StringContainer& stop_words) : stop_words_(MakeUniqueNonEmptyStrings(stop_words)) {
+        if (!all_of(stop_words_.begin(), stop_words_.end(), IsValidWord)) {
+            throw invalid_argument("Some of stop words includes special symbols");
         }
     }
 
@@ -88,15 +90,13 @@ public:
 
     void AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int>& ratings) {
         if (document_id < 0) {
-            throw invalid_argument("id must be >= 0"s);
+            throw invalid_argument("Document id "s + to_string(document_id) + " is less than zero"s);
         }
         if (documents_.count(document_id) > 0) {
-            throw invalid_argument("id must be unique"s);
-        }
-        if (!IsValidWord(document)) {
-            throw invalid_argument("document must be not includes special symbols"s);
+            throw invalid_argument("Document id "s + to_string(document_id) + " is already exists"s);
         }
         const vector<string> words = SplitIntoWordsNoStop(document);
+        document_ids_.push_back(document_id);
         const double inv_word_count = 1.0 / words.size();
         for (const string& word : words) {
             word_to_document_freqs_[word][document_id] += inv_word_count;
@@ -134,10 +134,7 @@ public:
     }
 
     int GetDocumentId(int index) const {
-        if (index < 0 || index >= GetDocumentCount()) {
-            throw out_of_range("index out of range"s);
-        }
-        return index;
+        return document_ids_.at(index);
     }
 
     tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const {
@@ -172,6 +169,7 @@ private:
     set<string> stop_words_;
     map<string, map<int, double>> word_to_document_freqs_;
     map<int, DocumentData> documents_;
+    vector<int> document_ids_;
 
     bool IsStopWord(const string& word) const {
         return stop_words_.count(word) > 0;
@@ -186,6 +184,9 @@ private:
     vector<string> SplitIntoWordsNoStop(const string& text) const {
         vector<string> words;
         for (const string& word : SplitIntoWords(text)) {
+            if (!IsValidWord(word)) {
+                throw invalid_argument("Word "s + word + " includes special symbols"s);
+            }
             if (!IsStopWord(word)) {
                 words.push_back(word);
             }
