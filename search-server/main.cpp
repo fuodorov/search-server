@@ -7,12 +7,15 @@
 #include <utility>
 #include <vector>
 #include <numeric>
+#include <stack>
+#include <deque>
 
 using namespace std;
 
 
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
 const double EPS = 1e-6;
+const int MIN_IN_DAY = 1440;
 
 string ReadLine() {
     string s;
@@ -405,6 +408,53 @@ auto Paginate(const Container& c, size_t page_size) {
     return Paginator(begin(c), end(c), page_size);
 }
 
+class RequestQueue {
+public:
+    explicit RequestQueue(const SearchServer& search_server) :
+            search_server_(search_server) {
+    }
+
+    template <typename DocumentPredicate>
+    vector<Document> AddFindRequest(const string& raw_query, DocumentPredicate document_predicate) {
+        auto result = search_server_.FindTopDocuments(raw_query, document_predicate);
+        if (requests_.size() >= min_in_day_) {
+            if (requests_[0].result.size() != 0) {
+                --empty_count_;
+                requests_.pop_back();
+            }
+        }
+        if (result.empty()) {
+            ++empty_count_;
+        }
+        requests_.push_front({result});
+        return result;
+    }
+
+    vector<Document> AddFindRequest(const string& raw_query, DocumentStatus status) {
+        return AddFindRequest(raw_query, [status](int document_id, DocumentStatus document_status, int rating) {
+            return document_status == status;
+        });
+    }
+
+    vector<Document> AddFindRequest(const string& raw_query) {
+        return AddFindRequest(raw_query, DocumentStatus::ACTUAL);
+    }
+
+    int GetNoResultRequests() const {
+        return empty_count_;
+    }
+
+private:
+    struct QueryResult {
+        vector<Document> result;
+    };
+
+    deque<QueryResult> requests_;
+    const static int min_in_day_ = MIN_IN_DAY;
+    int empty_count_ = 0;
+    const SearchServer& search_server_;
+};
+
 template <typename T, typename U>
 void AssertEqualImpl(const T& t, const U& u, const string& t_str, const string& u_str, const string& file,
                      const string& func, unsigned line, const string& hint) {
@@ -661,22 +711,6 @@ void TestCalculateRelevance() {
     }
 }
 
-void TestPagination() {
-    SearchServer server = CreateTestServer();
-    int page_size = 2;
-
-    {
-        for (const TEST_MATCH_DOCUMENT_REQUEST &request: TEST_MATCH_DOCUMENT_REQUESTS) {
-            const auto &docs = server.FindTopDocuments(request.query);
-            const auto page_count = docs.size() / page_size + (docs.size() % page_size > 0);
-            const auto pages = Paginate(docs, page_size);
-            ASSERT_EQUAL_HINT(pages.size(), page_count,
-                              "Incorrect page count for query '"s + request.query + "'"s);
-        }
-    }
-
-}
-
 void TestSearchServer() {
     RUN_TEST(TestDocumentSearchByQuery);
     RUN_TEST(TestDocumentSearchByStatus);
@@ -686,10 +720,58 @@ void TestSearchServer() {
     RUN_TEST(TestExcludeDocumentsWithMinusWordsFromAddedDocumentContent);
     RUN_TEST(TestSortResultsByRelevance);
     RUN_TEST(TestCalculateRelevance);
+}
+
+void TestPagination() {
+    SearchServer server = CreateTestServer();
+
+    {
+        for (const TEST_MATCH_DOCUMENT_REQUEST &request: TEST_MATCH_DOCUMENT_REQUESTS) {
+            const auto &docs = server.FindTopDocuments(request.query);
+            for (int page_size = 1; page_size <= docs.size(); ++page_size) {
+                const auto page_count = docs.size() / page_size + (docs.size() % page_size > 0);
+                const auto pages = Paginate(docs, page_size);
+                ASSERT_EQUAL_HINT(pages.size(), page_count,
+                                  "Incorrect page count for query '"s + request.query + "' "s +
+                                  "and page size = "s + to_string(page_size));
+            }
+        }
+    }
+
+}
+
+void TestPaginator() {
     RUN_TEST(TestPagination);
 }
 
+void TestGetNoResultRequests() {
+    SearchServer server = CreateTestServer();
+    RequestQueue request_queue(server);
+
+    for (int i = 0; i < MIN_IN_DAY; ++i) {
+        request_queue.AddFindRequest("empty"s);
+    }
+
+    {
+        ASSERT_EQUAL_HINT(request_queue.GetNoResultRequests(), MIN_IN_DAY,
+                          "Incorrect count of empty requests"s);
+    }
+}
+
+void TestRequestQueue() {
+    RUN_TEST(TestGetNoResultRequests);
+}
+
 int main() {
+    cout << "Testing SearchServer" << endl;
     TestSearchServer();
     cout << "Search server testing finished"s << endl;
+
+    cout << "Testing Paginator" << endl;
+    TestPaginator();
+    cout << "Paginator testing finished"s << endl;
+
+    cout << "Testing RequestQueue" << endl;
+    TestRequestQueue();
+    cout << "RequestQueue testing finished"s << endl;
 }
