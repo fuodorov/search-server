@@ -1,4 +1,5 @@
 #pragma once
+
 #ifndef CPP_SEARCH_SERVER_SEARCH_SERVER_H
 #define CPP_SEARCH_SERVER_SEARCH_SERVER_H
 
