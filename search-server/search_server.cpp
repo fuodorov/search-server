@@ -64,6 +64,15 @@ std::set<int>::const_iterator SearchServer::end() const {
     return document_ids_.end();
 }
 
+const std::map<std::string, double>& SearchServer::GetWordFrequencies(int document_id) const {
+    if (document_to_word_freqs_.count(document_id)) {
+        return document_to_word_freqs_.at(document_id);
+    } else {
+        static const std::map<std::string, double> empty;
+        return empty;
+    }
+}
+
 bool SearchServer::IsValidWord(const std::string& word) {
     return none_of(word.begin(), word.end(), [](char c) {
         return c > '\0' && c < ' ';
