@@ -101,9 +101,11 @@ SearchServer::QueryWord SearchServer::ParseQueryWord(std::string text) const {
 
     if (text.empty()) {
         throw std::invalid_argument("Query word i`s empty"s);
-    } else if (!IsValidWord(text)) {
+    }
+    if (!IsValidWord(text)) {
         throw std::invalid_argument("Query word "s + text + " includes special symbols"s);
-    } else if (text[0] == '-') {
+    }
+    if (text[0] == '-') {
         throw std::invalid_argument("Query word "s + text + " starts with minus"s);
     }
 
