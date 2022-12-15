@@ -17,6 +17,7 @@ void SearchServer::AddDocument(int document_id, const std::string& document,
     const double inv_word_count = 1.0 / words.size();
     for (const std::string& word : words) {
         word_to_document_freqs_[word][document_id] += inv_word_count;
+        document_to_word_freqs_[document_id][word] += word_to_document_freqs_[word][document_id];
     }
     documents_.emplace(document_id, DocumentData{ComputeAverageRating(ratings), status});
 }
