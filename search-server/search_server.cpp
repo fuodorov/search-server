@@ -13,7 +13,7 @@ void SearchServer::AddDocument(int document_id, const std::string& document,
         throw std::invalid_argument("Document id "s + std::to_string(document_id) + " is already exists"s);
     }
     const std::vector<std::string> words = SplitIntoWordsNoStop(document);
-    document_ids_.push_back(document_id);
+    document_ids_.insert(document_id);
     const double inv_word_count = 1.0 / words.size();
     for (const std::string& word : words) {
         word_to_document_freqs_[word][document_id] += inv_word_count;
@@ -56,8 +56,12 @@ std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument
     return {matched_words, documents_.at(document_id).status};
 }
 
-int SearchServer::GetDocumentId(int index) const {
-    return document_ids_.at(index);
+std::set<int>::const_iterator SearchServer::begin() const {
+    return document_ids_.begin();
+}
+
+std::set<int>::const_iterator SearchServer::end() const {
+    return document_ids_.end();
 }
 
 bool SearchServer::IsValidWord(const std::string& word) {
