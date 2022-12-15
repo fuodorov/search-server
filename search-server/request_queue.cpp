@@ -13,6 +13,6 @@ std::vector<Document> RequestQueue::AddFindRequest(const std::string& raw_query)
 }
 
 int RequestQueue::GetNoResultRequests() const {
-    return empty_count_;
+    return std::count(requests_.begin(), requests_.end(), false);
 }
 
