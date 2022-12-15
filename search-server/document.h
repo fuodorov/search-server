@@ -1,8 +1,5 @@
 #pragma once
 
-#ifndef CPP_SEARCH_SERVER_DOCUMENT_H
-#define CPP_SEARCH_SERVER_DOCUMENT_H
-
 #include <fstream>
 #include <iostream>
 
@@ -28,5 +25,3 @@ enum class DocumentStatus {
 };
 
 std::ostream& operator<<(std::ostream& out, const Document& document);
-
-#endif //CPP_SEARCH_SERVER_DOCUMENT_H

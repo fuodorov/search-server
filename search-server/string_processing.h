@@ -1,8 +1,5 @@
 #pragma once
 
-#ifndef CPP_SEARCH_SERVER_STRING_PROCESSING_H
-#define CPP_SEARCH_SERVER_STRING_PROCESSING_H
-
 #include <iostream>
 #include <set>
 #include <string>
@@ -21,6 +18,3 @@ std::set<std::string> MakeUniqueNonEmptyStrings(const StringContainer& strings) 
 }
 
 std::vector<std::string> SplitIntoWords(const std::string& text);
-
-
-#endif //CPP_SEARCH_SERVER_STRING_PROCESSING_H

@@ -1,8 +1,5 @@
 #pragma once
 
-#ifndef CPP_SEARCH_SERVER_PAGINATOR_H
-#define CPP_SEARCH_SERVER_PAGINATOR_H
-
 #include <cmath>
 #include <fstream>
 #include <iterator>
@@ -73,5 +70,3 @@ std::ostream& operator<<(std::ostream& os, const IteratorRange<Iterator>& range)
     }
     return os;
 }
-
-#endif //CPP_SEARCH_SERVER_PAGINATOR_H

@@ -1,8 +1,5 @@
 #pragma once
 
-#ifndef CPP_SEARCH_SERVER_REQUEST_QUEUE_H
-#define CPP_SEARCH_SERVER_REQUEST_QUEUE_H
-
 #include <algorithm>
 #include <deque>
 #include <string>
@@ -48,5 +45,3 @@ private:
     int empty_count_ = 0;
     const SearchServer& search_server_;
 };
-
-#endif //CPP_SEARCH_SERVER_REQUEST_QUEUE_H

@@ -1,8 +1,5 @@
 #pragma once
 
-#ifndef CPP_SEARCH_SERVER_LOG_DURATION_H
-#define CPP_SEARCH_SERVER_LOG_DURATION_H
-
 #include <algorithm>
 #include <chrono>
 #include <cstdlib>
@@ -40,5 +37,3 @@ private:
     const std::string operation_name_ = ""s;
     std::ostream& os_;
 };
-
-#endif //CPP_SEARCH_SERVER_LOG_DURATION_H

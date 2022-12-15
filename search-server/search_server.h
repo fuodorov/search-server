@@ -1,8 +1,5 @@
 #pragma once
 
-#ifndef CPP_SEARCH_SERVER_SEARCH_SERVER_H
-#define CPP_SEARCH_SERVER_SEARCH_SERVER_H
-
 #include <algorithm>
 #include <map>
 #include <numeric>
@@ -127,5 +124,3 @@ private:
         return matched_documents;
     }
 };
-
-#endif //CPP_SEARCH_SERVER_SEARCH_SERVER_H
