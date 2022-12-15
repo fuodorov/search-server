@@ -73,6 +73,18 @@ const std::map<std::string, double>& SearchServer::GetWordFrequencies(int docume
     }
 }
 
+void SearchServer::RemoveDocument(int document_id) {
+    if (document_to_word_freqs_.count(document_id) == 0) {
+        throw std::invalid_argument("Document id "s + std::to_string(document_id) + " not found"s);
+    }
+    for (const auto& [word, _] : document_to_word_freqs_.at(document_id)) {
+        word_to_document_freqs_.at(word).erase(document_id);
+    }
+    document_to_word_freqs_.erase(document_id);
+    documents_.erase(document_id);
+    document_ids_.erase(document_id);
+}
+
 bool SearchServer::IsValidWord(const std::string& word) {
     return none_of(word.begin(), word.end(), [](char c) {
         return c > '\0' && c < ' ';

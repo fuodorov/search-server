@@ -48,6 +48,8 @@ public:
 
     const std::map<std::string, double>& GetWordFrequencies(int document_id) const;
 
+    void RemoveDocument(int document_id);
+
 private:
     struct DocumentData {
         int rating;
