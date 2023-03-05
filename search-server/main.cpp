@@ -1,6 +1,8 @@
-#include "search_server.h"
 #include "process_queries.h"
+#include "search_server.h"
+#include "test_example_functions.h"
 
+#include <execution>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -9,37 +11,31 @@ using namespace std;
 
 int main() {
     SearchServer search_server("and with"s);
-
     int id = 0;
     for (
         const string& text : {
-            "funny pet and nasty rat"s,
-            "funny pet with curly hair"s,
-            "funny pet and not very nasty rat"s,
-            "pet with rat and rat and rat"s,
-            "nasty rat with curly hair"s,
+            "white cat and yellow hat"s,
+            "curly cat curly tail"s,
+            "nasty dog with big eyes"s,
+            "nasty pigeon john"s,
         }
     ) {
         search_server.AddDocument(++id, text, DocumentStatus::ACTUAL, {1, 2});
     }
-
-    const string query = "curly and funny"s;
-
-    auto report = [&search_server, &query] {
-        cout << search_server.GetDocumentCount() << " documents total, "s
-            << search_server.FindTopDocuments(query).size() << " documents for query ["s << query << "]"s << endl;
-    };
-
-    report();
-    // однопоточная версия
-    search_server.RemoveDocument(5);
-    report();
-    // однопоточная версия
-    search_server.RemoveDocument(execution::seq, 1);
-    report();
-    // многопоточная версия
-    search_server.RemoveDocument(execution::par, 2);
-    report();
-
+    cout << "ACTUAL by default:"s << endl;
+    // последовательная версия
+    for (const Document& document : search_server.FindTopDocuments("curly nasty cat"s)) {
+        PrintDocument(document);
+    }
+    cout << "BANNED:"s << endl;
+    // последовательная версия
+    for (const Document& document : search_server.FindTopDocuments(execution::seq, "curly nasty cat"s, DocumentStatus::BANNED)) {
+        PrintDocument(document);
+    }
+    cout << "Even ids:"s << endl;
+    // параллельная версия
+    for (const Document& document : search_server.FindTopDocuments(execution::par, "curly nasty cat"s, [](int document_id, DocumentStatus status, int rating) { return document_id % 2 == 0; })) {
+        PrintDocument(document);
+    }
     return 0;
 }
