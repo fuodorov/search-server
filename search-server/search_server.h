@@ -8,6 +8,7 @@
 #include <string>
 #include <tuple>
 #include <vector>
+#include <cmath>
 
 #include "document.h"
 #include "string_processing.h"
