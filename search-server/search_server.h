@@ -9,6 +9,7 @@
 #include <tuple>
 #include <vector>
 #include <cmath>
+#include <execution>
 
 #include "document.h"
 #include "string_processing.h"
@@ -50,6 +51,8 @@ public:
     const std::map<std::string, double>& GetWordFrequencies(int document_id) const;
 
     void RemoveDocument(int document_id);
+    void RemoveDocument(const std::execution::sequenced_policy&, int document_id);
+    void RemoveDocument(const std::execution::parallel_policy&, int document_id);
 
 private:
     struct DocumentData {
